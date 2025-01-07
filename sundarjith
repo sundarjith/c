@@ -1,0 +1,472 @@
+#include <stdio.h>
+#include <stdlib.h>
+#include <string.h>
+#include <ctype.h>
+
+#define MAX_STUDENTS 200
+#define MAX_COURSES 50
+#define MAX_NAME_LENGTH 50
+#define MAX_ADDRESS_LENGTH 100
+
+// Structure to store student data
+struct Student {
+    int id;
+    char name[MAX_NAME_LENGTH];
+    float marks;
+    char gender[10];
+    int age;
+    char address[MAX_ADDRESS_LENGTH];
+    char dob[15];  // Date of birth (DD/MM/YYYY)
+    int enrolled_courses[MAX_COURSES]; // Array to store course IDs
+    int num_courses; // Number of courses the student is enrolled in
+};
+
+// Structure to store course data
+struct Course {
+    int course_id;
+    char course_name[MAX_NAME_LENGTH];
+    int max_students; // Max number of students in the course
+    int enrolled_students; // Current number of enrolled students
+};
+
+// Function prototypes
+void print_student(struct Student student);
+void print_course(struct Course course);
+void sort_students_by_marks(struct Student *students, int n);
+int search_student_by_id(struct Student *students, int n, int id);
+int search_course_by_id(struct Course *courses, int n, int id);
+void read_students_from_file(struct Student *students, int *n, const char *filename);
+void read_courses_from_file(struct Course *courses, int *n, const char *filename);
+void save_students_to_file(struct Student *students, int n, const char *filename);
+void save_courses_to_file(struct Course *courses, int n, const char *filename);
+void add_student(struct Student *students, int *n);
+void add_course(struct Course *courses, int *n);
+void display_all_students(struct Student *students, int n);
+void display_all_courses(struct Course *courses, int n);
+void delete_student(struct Student *students, int *n, int id);
+void delete_course(struct Course *courses, int *n, int id);
+void basic_arithmetic_operations();
+float calculate_average_marks(struct Student *students, int n);
+void find_highest_lowest_marks(struct Student *students, int n);
+void find_highest_lowest_course(struct Course *courses, int n);
+void enroll_student_in_course(struct Student *students, int student_id, struct Course *courses, int course_id, int num_courses);
+void print_menu();
+
+// Main function
+int main() {
+    struct Student students[MAX_STUDENTS];
+    struct Course courses[MAX_COURSES];
+    int num_students = 0, num_courses = 0;
+    int choice, id, course_id;
+
+    read_students_from_file(students, &num_students, "students.txt");
+    read_courses_from_file(courses, &num_courses, "courses.txt");
+
+    while (1) {
+        print_menu();
+        scanf("%d", &choice);
+
+        switch (choice) {
+            case 1:
+                add_student(students, &num_students);
+                break;
+            case 2:
+                display_all_students(students, num_students);
+                break;
+            case 3:
+                printf("Enter student ID to search: ");
+                scanf("%d", &id);
+                int index = search_student_by_id(students, num_students, id);
+                if (index != -1) {
+                    print_student(students[index]);
+                } else {
+                    printf("Student not found.\n");
+                }
+                break;
+            case 4:
+                sort_students_by_marks(students, num_students);
+                printf("Students sorted by marks:\n");
+                display_all_students(students, num_students);
+                break;
+            case 5:
+                basic_arithmetic_operations();
+                break;
+            case 6:
+                read_students_from_file(students, &num_students, "students.txt");
+                break;
+            case 7:
+                save_students_to_file(students, num_students, "students.txt");
+                break;
+            case 8:
+                printf("Enter student ID to delete: ");
+                scanf("%d", &id);
+                delete_student(students, &num_students, id);
+                break;
+            case 9:
+                printf("Enter course ID to enroll student in: ");
+                scanf("%d", &course_id);
+                printf("Enter student ID: ");
+                scanf("%d", &id);
+                enroll_student_in_course(students, id, courses, course_id, num_courses);
+                break;
+            case 10:
+                find_highest_lowest_marks(students, num_students);
+                break;
+            case 11:
+                add_course(courses, &num_courses);
+                break;
+            case 12:
+                display_all_courses(courses, num_courses);
+                break;
+            case 13:
+                printf("Enter course ID to delete: ");
+                scanf("%d", &course_id);
+                delete_course(courses, &num_courses, course_id);
+                break;
+            case 14:
+                find_highest_lowest_course(courses, num_courses);
+                break;
+            case 15:
+                printf("Exiting program...\n");
+                save_students_to_file(students, num_students, "students.txt");
+                save_courses_to_file(courses, num_courses, "courses.txt");
+                return 0;
+            default:
+                printf("Invalid choice. Please try again.\n");
+        }
+    }
+
+    return 0;
+}
+
+// Function to print student details
+void print_student(struct Student student) {
+    printf("ID: %d\n", student.id);
+    printf("Name: %s\n", student.name);
+    printf("Marks: %.2f\n", student.marks);
+    printf("Gender: %s\n", student.gender);
+    printf("Age: %d\n", student.age);
+    printf("Address: %s\n", student.address);
+    printf("Date of Birth: %s\n", student.dob);
+    printf("Courses Enrolled: ");
+    for (int i = 0; i < student.num_courses; i++) {
+        printf("%d ", student.enrolled_courses[i]);
+    }
+    printf("\n");
+}
+
+// Function to print course details
+void print_course(struct Course course) {
+    printf("Course ID: %d\n", course.course_id);
+    printf("Course Name: %s\n", course.course_name);
+    printf("Max Students: %d\n", course.max_students);
+    printf("Enrolled Students: %d\n", course.enrolled_students);
+}
+
+// Function to sort students by marks in descending order
+void sort_students_by_marks(struct Student *students, int n) {
+    struct Student temp;
+    for (int i = 0; i < n - 1; i++) {
+        for (int j = i + 1; j < n; j++) {
+            if (students[i].marks < students[j].marks) {
+                temp = students[i];
+                students[i] = students[j];
+                students[j] = temp;
+            }
+        }
+    }
+}
+
+// Function to search for a student by ID
+int search_student_by_id(struct Student *students, int n, int id) {
+    for (int i = 0; i < n; i++) {
+        if (students[i].id == id) {
+            return i;
+        }
+    }
+    return -1; // Not found
+}
+
+// Function to search for a course by ID
+int search_course_by_id(struct Course *courses, int n, int id) {
+    for (int i = 0; i < n; i++) {
+        if (courses[i].course_id == id) {
+            return i;
+        }
+    }
+    return -1; // Not found
+}
+
+// Function to read students from a file
+void read_students_from_file(struct Student *students, int *n, const char *filename) {
+    FILE *file = fopen(filename, "r");
+    if (file == NULL) {
+        printf("Error opening student file.\n");
+        return;
+    }
+
+    fscanf(file, "%d", n);
+    for (int i = 0; i < *n; i++) {
+        fscanf(file, "%d %s %f %s %d %s %s %d", &students[i].id, students[i].name, &students[i].marks, students[i].gender, &students[i].age, students[i].address, students[i].dob, &students[i].num_courses);
+        for (int j = 0; j < students[i].num_courses; j++) {
+            fscanf(file, "%d", &students[i].enrolled_courses[j]);
+        }
+    }
+
+    fclose(file);
+}
+
+// Function to read courses from a file
+void read_courses_from_file(struct Course *courses, int *n, const char *filename) {
+    FILE *file = fopen(filename, "r");
+    if (file == NULL) {
+        printf("Error opening course file.\n");
+        return;
+    }
+
+    fscanf(file, "%d", n);
+    for (int i = 0; i < *n; i++) {
+        fscanf(file, "%d %s %d %d", &courses[i].course_id, courses[i].course_name, &courses[i].max_students, &courses[i].enrolled_students);
+    }
+
+    fclose(file);
+}
+
+// Function to save students to a file
+void save_students_to_file(struct Student *students, int n, const char *filename) {
+    FILE *file = fopen(filename, "w");
+    if (file == NULL) {
+        printf("Error opening student file.\n");
+        return;
+    }
+
+    fprintf(file, "%d\n", n);
+    for (int i = 0; i < n; i++) {
+        fprintf(file, "%d %s %.2f %s %d %s %s %d", students[i].id, students[i].name, students[i].marks, students[i].gender, students[i].age, students[i].address, students[i].dob, students[i].num_courses);
+        for (int j = 0; j < students[i].num_courses; j++) {
+            fprintf(file, " %d", students[i].enrolled_courses[j]);
+        }
+        fprintf(file, "\n");
+    }
+
+    fclose(file);
+}
+
+// Function to save courses to a file
+void save_courses_to_file(struct Course *courses, int n, const char *filename) {
+    FILE *file = fopen(filename, "w");
+    if (file == NULL) {
+        printf("Error opening course file.\n");
+        return;
+    }
+
+    fprintf(file, "%d\n", n);
+    for (int i = 0; i < n; i++) {
+        fprintf(file, "%d %s %d %d\n", courses[i].course_id, courses[i].course_name, courses[i].max_students, courses[i].enrolled_students);
+    }
+
+    fclose(file);
+}
+
+// Function to add a new student
+void add_student(struct Student *students, int *n) {
+    if (*n >= MAX_STUDENTS) {
+        printf("Student list is full.\n");
+        return;
+    }
+    printf("Enter student ID: ");
+    scanf("%d", &students[*n].id);
+    printf("Enter student name: ");
+    scanf(" %[^\n]%*c", students[*n].name);
+    printf("Enter student marks: ");
+    scanf("%f", &students[*n].marks);
+    printf("Enter student gender (Male/Female/Other): ");
+    scanf("%s", students[*n].gender);
+    printf("Enter student age: ");
+    scanf("%d", &students[*n].age);
+    printf("Enter student address: ");
+    scanf(" %[^\n]%*c", students[*n].address);
+    printf("Enter student date of birth (DD/MM/YYYY): ");
+    scanf("%s", students[*n].dob);
+    students[*n].num_courses = 0;
+    (*n)++;
+}
+
+// Function to add a new course
+void add_course(struct Course *courses, int *n) {
+    if (*n >= MAX_COURSES) {
+        printf("Course list is full.\n");
+        return;
+    }
+    printf("Enter course ID: ");
+    scanf("%d", &courses[*n].course_id);
+    printf("Enter course name: ");
+    scanf(" %[^\n]%*c", courses[*n].course_name);
+    printf("Enter max number of students: ");
+    scanf("%d", &courses[*n].max_students);
+    courses[*n].enrolled_students = 0;
+    (*n)++;
+}
+
+// Function to display all students
+void display_all_students(struct Student *students, int n) {
+    if (n == 0) {
+        printf("No students available.\n");
+        return;
+    }
+    for (int i = 0; i < n; i++) {
+        print_student(students[i]);
+        printf("\n");
+    }
+}
+
+// Function to display all courses
+void display_all_courses(struct Course *courses, int n) {
+    if (n == 0) {
+        printf("No courses available.\n");
+        return;
+    }
+    for (int i = 0; i < n; i++) {
+        print_course(courses[i]);
+        printf("\n");
+    }
+}
+
+// Function to delete a student by ID
+void delete_student(struct Student *students, int *n, int id) {
+    int index = search_student_by_id(students, *n, id);
+    if (index == -1) {
+        printf("Student with ID %d not found.\n", id);
+        return;
+    }
+    for (int i = index; i < *n - 1; i++) {
+        students[i] = students[i + 1];
+    }
+    (*n)--;
+    printf("Student with ID %d deleted successfully.\n", id);
+}
+
+// Function to delete a course by ID
+void delete_course(struct Course *courses, int *n, int id) {
+    int index = search_course_by_id(courses, *n, id);
+    if (index == -1) {
+        printf("Course with ID %d not found.\n", id);
+        return;
+    }
+    for (int i = index; i < *n - 1; i++) {
+        courses[i] = courses[i + 1];
+    }
+    (*n)--;
+    printf("Course with ID %d deleted successfully.\n", id);
+}
+
+// Function to enroll a student in a course
+void enroll_student_in_course(struct Student *students, int student_id, struct Course *courses, int course_id, int num_courses) {
+    int student_index = search_student_by_id(students, MAX_STUDENTS, student_id);
+    int course_index = search_course_by_id(courses, num_courses, course_id);
+
+    if (student_index == -1) {
+        printf("Student not found.\n");
+        return;
+    }
+    if (course_index == -1) {
+        printf("Course not found.\n");
+        return;
+    }
+
+    struct Student *student = &students[student_index];
+    struct Course *course = &courses[course_index];
+
+    if (student->num_courses >= MAX_COURSES) {
+        printf("Student is already enrolled in maximum number of courses.\n");
+        return;
+    }
+    if (course->enrolled_students >= course->max_students) {
+        printf("Course is full.\n");
+        return;
+    }
+
+    student->enrolled_courses[student->num_courses] = course_id;
+    student->num_courses++;
+    course->enrolled_students++;
+    printf("Student enrolled in course successfully.\n");
+}
+
+// Function to calculate the average marks of students
+float calculate_average_marks(struct Student *students, int n) {
+    if (n == 0) {
+        return 0;
+    }
+    float total = 0;
+    for (int i = 0; i < n; i++) {
+        total += students[i].marks;
+    }
+    return total / n;
+}
+
+// Function to find highest and lowest marks among students
+void find_highest_lowest_marks(struct Student *students, int n) {
+    if (n == 0) {
+        printf("No students available.\n");
+        return;
+    }
+
+    struct Student highest = students[0];
+    struct Student lowest = students[0];
+
+    for (int i = 1; i < n; i++) {
+        if (students[i].marks > highest.marks) {
+            highest = students[i];
+        }
+        if (students[i].marks < lowest.marks) {
+            lowest = students[i];
+        }
+    }
+
+    printf("Highest marks: %s (ID: %d) - %.2f\n", highest.name, highest.id, highest.marks);
+    printf("Lowest marks: %s (ID: %d) - %.2f\n", lowest.name, lowest.id, lowest.marks);
+}
+
+// Function to find highest and lowest enrolled courses
+void find_highest_lowest_course(struct Course *courses, int n) {
+    if (n == 0) {
+        printf("No courses available.\n");
+        return;
+    }
+
+    struct Course highest = courses[0];
+    struct Course lowest = courses[0];
+
+    for (int i = 1; i < n; i++) {
+        if (courses[i].enrolled_students > highest.enrolled_students) {
+            highest = courses[i];
+        }
+        if (courses[i].enrolled_students < lowest.enrolled_students) {
+            lowest = courses[i];
+        }
+    }
+
+    printf("Course with most students: %s (ID: %d) - %d students\n", highest.course_name, highest.course_id, highest.enrolled_students);
+    printf("Course with least students: %s (ID: %d) - %d students\n", lowest.course_name, lowest.course_id, lowest.enrolled_students);
+}
+
+// Function to print the menu
+void print_menu() {
+    printf("\nMenu:\n");
+    printf("1. Add new student\n");
+    printf("2. Display all students\n");
+    printf("3. Search student by ID\n");
+    printf("4. Sort students by marks\n");
+    printf("5. Perform arithmetic operations\n");
+    printf("6. Read students from file\n");
+    printf("7. Save students to file\n");
+    printf("8. Delete student by ID\n");
+    printf("9. Enroll student in a course\n");
+    printf("10. Find highest and lowest marks\n");
+    printf("11. Add new course\n");
+    printf("12. Display all courses\n");
+    printf("13. Delete course by ID\n");
+    printf("14. Find highest and lowest enrolled courses\n");
+    printf("15. Exit\n");
+    printf("Enter your choice: ");
+}
